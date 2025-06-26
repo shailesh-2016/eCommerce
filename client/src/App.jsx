@@ -18,6 +18,7 @@ import CheckAuth from "./components/common/check-auth";
 import UnAuth from "./pages/unAuth/UnAuth";
 import { useDispatch, useSelector } from "react-redux";
 import { checkAuth } from "./store/auth-slice";
+import { Skeleton } from "./components/ui/skeleton";
 
 const App = () => {
  const { user, isAuthenticated, isLoading } = useSelector(
@@ -29,7 +30,7 @@ const App = () => {
     dispatch(checkAuth());
   }, [dispatch]);
 
-  // if (isLoading) return <Skeleton className="w-[800] bg-black h-[600px]" />;
+  if (isLoading) return <Skeleton className="w-[800] bg-black h-[600px]" />;
 
   console.log(isLoading, user);
   return (

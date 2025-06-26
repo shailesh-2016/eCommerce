@@ -2,6 +2,7 @@ const { User } = require("../../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+// ✅ REGISTER
 exports.register = async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -30,12 +31,12 @@ exports.register = async (req, res) => {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
 
-///Login
+// ✅ LOGIN
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -44,11 +45,11 @@ exports.login = async (req, res) => {
     if (!checkUser)
       return res.json({
         success: false,
-        message: "User doesn't exists! Please register first",
+        message: "User doesn't exist! Please register first",
       });
 
-    const Match = await bcrypt.compare(password, checkUser.password);
-    if (!Match)
+    const isMatch = await bcrypt.compare(password, checkUser.password);
+    if (!isMatch)
       return res.json({
         success: false,
         message: "Incorrect password! Please try again",
@@ -61,29 +62,37 @@ exports.login = async (req, res) => {
         email: checkUser.email,
         username: checkUser.username,
       },
-      "CLIENT_SECRET_KEY",
+      process.env.SECRET, // 🛡️ secure way
       { expiresIn: "60m" }
     );
 
-    res.cookie("token", token, { httpOnly: true, secure: false }).json({
-      success: true,
-      message: "Logged in successfully",
-      user: {
-        email: checkUser.email,
-        role: checkUser.role,
-        id: checkUser._id,
-        username: checkUser.username,
-      },
-    });
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: false, 
+        sameSite: "lax",
+        maxAge: 60 * 60 * 1000, 
+      })
+      .json({
+        success: true,
+        message: "Logged in successfully",
+        user: {
+          id: checkUser._id,
+          username: checkUser.username,
+          email: checkUser.email,
+          role: checkUser.role,
+        },
+      });
   } catch (e) {
     console.log(e);
     res.status(500).json({
       success: false,
-      message: "Some error occured",
+      message: "Some error occurred",
     });
   }
 };
 
+// ✅ LOGOUT
 exports.logoutUser = (req, res) => {
   res.clearCookie("token").json({
     success: true,
@@ -91,21 +100,22 @@ exports.logoutUser = (req, res) => {
   });
 };
 
-//auth middleware
+// ✅ AUTH MIDDLEWARE
 exports.authMiddleware = async (req, res, next) => {
   const token = req.cookies.token;
-  if (!token)
+  if (!token) {
     return res.status(401).json({
       success: false,
       message: "Unauthorised user!",
     });
+  }
 
   try {
-    const decoded = jwt.verify(token, "CLIENT_SECRET_KEY");
+    const decoded = jwt.verify(token, process.env.SECRET);
     req.user = decoded;
     next();
   } catch (error) {
-    res.status(401).json({
+    return res.status(401).json({
       success: false,
       message: "Unauthorised user!",
     });
